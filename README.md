@@ -1,5 +1,7 @@
 # FSharpEventAddons
 
+> **Important Note**: The API reference in embedded NuGet documentation has a typo, where the parameter `priority` is actually of type `int option` (see [API Reference](#api-reference) for details). The GitHub README.md and the actual content of this F# library shall prevail. This cosmetic issue does not affect usage.
+
 A functional programming-inspired event scheduling library for F# with priority, delayed, and periodic event schedulers. (current version 1.0.0; already stable)
 
 If you're using F# event models for the first time, or want to refresh your knowledge, please see the [Beginner's Guide](#f-event-models-a-beginners-guide) section.
@@ -69,7 +71,7 @@ let eventId = scheduler.SchedulePeriodic((fun () -> printfn "Periodic event"), 5
 
 ### `PriorityEventScheduler`
 
-- `Schedule(action: unit -> unit, priority: int) : unit` - Schedule an event with priority
+- _`Schedule(action: unit -> unit, priority: int option) : unit` - Schedule an event with priority; `None` for default priority of 0_
 - `Execute() : unit` - Execute all pending events in priority order
 - `EventCount: int` - Get current count of pending events
 - `Clear() : unit` - Clear all pending events
