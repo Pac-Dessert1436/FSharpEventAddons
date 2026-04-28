@@ -8,7 +8,7 @@
     
     <!-- Package Metadata -->
     <PackageId>FSharpEventAddons</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Pac-Dessert1436</Authors>
     <Company></Company>
     <Description>A functional programming-inspired event scheduling library for F# with priority, delayed, and periodic event schedulers.</Description>

@@ -175,3 +175,76 @@ type public PeriodicEventScheduler() =
     /// Remove a specific periodic event by its unique identifier.
     member _.RemovePeriodic(eventId: Guid) : unit =
         lock lockObj (fun () -> state <- state |> List.filter (fun (evt: PeriodicEventItem) -> evt.Id <> eventId))
+
+/// Composite event scheduler that combines multiple scheduler types for unified
+/// event management.
+/// Provides a convenient way to manage complex event workflows with priority,
+/// delayed, and periodic events.
+type public CompositeEventScheduler() =
+    let priorityScheduler: PriorityEventScheduler = PriorityEventScheduler()
+    let delayedScheduler: DelayedEventScheduler = DelayedEventScheduler()
+    let periodicScheduler: PeriodicEventScheduler = PeriodicEventScheduler()
+
+    /// Schedule a priority event (higher numbers = higher priority).
+    member _.SchedulePriority(action: unit -> unit, priority: int option) : unit =
+        priorityScheduler.Schedule(action, priority)
+
+    /// Schedule a delayed event to execute after specified seconds.
+    member _.ScheduleDelayed(action: unit -> unit, delaySec: float) : unit =
+        delayedScheduler.ScheduleDelayed(action, delaySec)
+
+    /// Schedule a periodic event with specified interval in seconds.
+    /// Returns a unique identifier that can be used to remove the event later.
+    member _.SchedulePeriodic(action: unit -> unit, intervalSec: float) : Guid =
+        periodicScheduler.SchedulePeriodic(action, intervalSec)
+
+    /// Execute all pending events across all schedulers in the following order:
+    /// 1. Priority events (highest priority first)
+    /// 2. Delayed events (expired events)
+    /// 3. Periodic events (due events)
+    member _.ExecuteAll() : unit =
+        priorityScheduler.Execute()
+        delayedScheduler.ExecuteExpired()
+        periodicScheduler.ExecuteDue()
+
+    /// Execute only priority events.
+    member _.ExecutePriority() : unit = priorityScheduler.Execute()
+
+    /// Execute only expired delayed events.
+    member _.ExecuteDelayed() : unit = delayedScheduler.ExecuteExpired()
+
+    /// Execute only due periodic events.
+    member _.ExecutePeriodic() : unit = periodicScheduler.ExecuteDue()
+
+    /// Get total count of all pending events across all schedulers.
+    member _.TotalEventCount: int =
+        priorityScheduler.EventCount
+        + delayedScheduler.EventCount
+        + periodicScheduler.EventCount
+
+    /// Get individual event counts for each scheduler type.
+    member _.GetEventCounts() : (int * int * int) =
+        priorityScheduler.EventCount, delayedScheduler.EventCount, periodicScheduler.EventCount
+
+    /// Get time until next delayed event (if any).
+    member _.SecondsUntilNextDelayedEvent: float option =
+        delayedScheduler.SecondsUntilNextEvent
+
+    /// Remove a specific periodic event by its unique identifier.
+    member _.RemovePeriodic(eventId: Guid) : unit =
+        periodicScheduler.RemovePeriodic eventId
+
+    /// Clear all events from all schedulers.
+    member _.ClearAll() : unit =
+        priorityScheduler.Clear()
+        delayedScheduler.Clear()
+        periodicScheduler.Clear()
+
+    /// Clear only priority events.
+    member _.ClearPriority() : unit = priorityScheduler.Clear()
+
+    /// Clear only delayed events.
+    member _.ClearDelayed() : unit = delayedScheduler.Clear()
+
+    /// Clear only periodic events.
+    member _.ClearPeriodic() : unit = periodicScheduler.Clear()

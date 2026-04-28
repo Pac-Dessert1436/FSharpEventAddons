@@ -1,8 +1,6 @@
 # FSharpEventAddons
 
-> **Important Note**: The API reference in embedded NuGet documentation has a typo, where the parameter `priority` is actually of type `int option` (see [API Reference](#api-reference) for details). The GitHub README.md and the actual content of this F# library shall prevail. This cosmetic issue does not affect usage.
-
-A functional programming-inspired event scheduling library for F# with priority, delayed, and periodic event schedulers. (current version 1.0.0; already stable)
+A functional programming-inspired event scheduling library for F# with priority, delayed, and periodic event schedulers. (current version 1.0.1; already stable)
 
 If you're using F# event models for the first time, or want to refresh your knowledge, please see the [Beginner's Guide](#f-event-models-a-beginners-guide) section.
 
@@ -15,6 +13,7 @@ If you're using F# event models for the first time, or want to refresh your know
 - **`PriorityEventScheduler`**: Execute events based on priority (higher number = higher priority)
 - **`DelayedEventScheduler`**: Schedule events to execute after specified delays
 - **`PeriodicEventScheduler`**: Execute events at regular intervals with unique identifier management
+- **`CompositeEventScheduler`**: Unified scheduler combining all three types for complex workflows (NEW in version 1.0.1)
 - **Thread-safe**: All operations are thread-safe using proper locking
 - **Functional API design**: Provides functional programming patterns while using mutable state internally for performance
 - **Honest documentation**: Clear about implementation trade-offs between functional purity and practical performance
@@ -63,15 +62,33 @@ scheduler.ScheduleDelayed((fun () -> printfn "Delayed event"), 1.0) // 1 second 
 ### Periodic Event Scheduling
 ```fsharp
 let scheduler = PeriodicEventScheduler()
-let eventId = scheduler.SchedulePeriodic((fun () -> printfn "Periodic event"), 500) // Every 500ms
+let eventId = scheduler.SchedulePeriodic((fun () -> printfn "Periodic event"), 0.5) // Every 0.5 seconds (approx. 500 ms)
 // Call ExecuteDue() periodically to execute due events
+```
+
+### Composite Event Scheduling (NEW in 1.0.1)
+```fsharp
+let compositeScheduler = CompositeEventScheduler()
+
+// Schedule different types of events
+compositeScheduler.SchedulePriority((fun () -> printfn "High priority event"), 10)
+compositeScheduler.ScheduleDelayed((fun () -> printfn "Delayed event"), 2.5) // After 2.5 seconds
+let periodicId = compositeScheduler.SchedulePeriodic((fun () -> printfn "Periodic event"), 1.0) // Every second
+
+// Execute all events in unified workflow
+printfn "Total events: %d" (compositeScheduler.TotalEventCount)
+let (priorityCount, delayedCount, periodicCount) = compositeScheduler.GetEventCounts()
+printfn "Priority: %d, Delayed: %d, Periodic: %d" priorityCount delayedCount periodicCount
+
+// Execute all pending events
+compositeScheduler.ExecuteAll()
 ```
 
 ## API Reference
 
 ### `PriorityEventScheduler`
 
-- _`Schedule(action: unit -> unit, priority: int option) : unit` - Schedule an event with priority; `None` for default priority of 0_
+- `Schedule(action: unit -> unit, priority: int option) : unit` - Schedule an event with priority; `None` for default priority of 0
 - `Execute() : unit` - Execute all pending events in priority order
 - `EventCount: int` - Get current count of pending events
 - `Clear() : unit` - Clear all pending events
@@ -91,6 +108,24 @@ let eventId = scheduler.SchedulePeriodic((fun () -> printfn "Periodic event"), 5
 - `EventCount: int` - Get current count of periodic events
 - `RemovePeriodic(eventId: Guid) : unit` - Remove specific periodic event
 - `Clear() : unit` - Clear all periodic events
+
+### `CompositeEventScheduler` (NEW in 1.0.1)
+
+- `SchedulePriority(action: unit -> unit, priority: int option) : unit` - Schedule a priority event with optional priority parameter
+- `ScheduleDelayed(action: unit -> unit, delaySec: float) : unit` - Schedule a delayed event with seconds delay
+- `SchedulePeriodic(action: unit -> unit, intervalSec: float) : Guid` - Schedule a periodic event with seconds interval, returns unique identifier
+- `ExecuteAll() : unit` - Execute all pending events across all schedulers (priority → delayed → periodic)
+- `ExecutePriority() : unit` - Execute only priority events
+- `ExecuteDelayed() : unit` - Execute only expired delayed events
+- `ExecutePeriodic() : unit` - Execute only due periodic events
+- `TotalEventCount: int` - Get total count of all pending events
+- `GetEventCounts() : (int * int * int)` - Get individual counts for priority, delayed, and periodic events
+- `SecondsUntilNextDelayedEvent: float option` - Time until next delayed event in seconds
+- `RemovePeriodic(eventId: Guid) : unit` - Remove specific periodic event
+- `ClearAll() : unit` - Clear all events from all schedulers
+- `ClearPriority() : unit` - Clear only priority events
+- `ClearDelayed() : unit` - Clear only delayed events
+- `ClearPeriodic() : unit` - Clear only periodic events
 
 ## F# Event Models: A Beginner's Guide
 
@@ -247,4 +282,5 @@ This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICEN
 
 ## Version History
 
+- **1.0.1**: Added `CompositeEventScheduler` with existing schedulers combined
 - **1.0.0**: Stable release with priority, delayed, and periodic event schedulers
